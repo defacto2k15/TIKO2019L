@@ -29,7 +29,7 @@
         $instanceDescription | add-member -type NoteProperty -Name ParameterVbvValue -Value $rate
 
         if( $libSetting -eq 4 ){
-            $ffmpegOptions.value += "-maxrate $($rate)K", "-bufsize $($rate)K"
+            $ffmpegOptions.value += "-maxrate $($rate)K", "-bufsize $(2*$rate)K"
         } else{
             $x265Options.value += "vbv-maxrate=$($rate)", "vbv-bufsize=$(2*$rate)"
         }
@@ -59,15 +59,17 @@ function GenerateParametersString($x264Options, $x265Options, $ffmpegOptions){
 
 
 $ErrorActionPreference = "Inquire";
-#cd C:\studiaMagisterskie\TIKO\projekt\testowanie
-$inputVideoFile = "inputVideo.webm"
+cd C:\studiaMagisterskie\TIKO\projekt\testowanie
+$inputVideoFile = "snd.yuv"
+$testPrefix = "crfvbv2"
+$rawVideoAdditionalOptions = "-f rawvideo -vcodec rawvideo -s 1920x1080 -r 30 -pix_fmt yuv420p "
 
 cls
 rm .\output-*
 
-$rateSettigns =  @{cbr=4000}, @{crf=24; vbv=500}, @{crf=24}, @{vbv=500}, @{abr=1000}
-$libSettings = 4, 5 # 4 - x264 5 - x265
-$passesSettings = 1, 2
+$rateSettigns = @{crf=17;vbv=11000}, @{crf=21; vbv=5500}, @{crf=24; vbv=3300}, @{crf=27; vbv=1960}, @{crf=32; vbv=735}, @{crf=37; vbv=324}
+$libSettings =  5 #, 5 # 4 - x264 5 - x265
+$passesSettings = 1 #, 2
 $deblockSettings = @{deblock=$TRUE}# , @{deblock=$FALSE} 
 $bframeSettings = 8# 0, 8, 32
 $partitionSettings = "default"#, "all", "none"
@@ -125,17 +127,16 @@ foreach($aPartitionSetting in $partitionSettings){
         $ffmpegOptions += "-c:v libx265"
     }
 
-    $outFileName = "output-$thisInstanceIndex.$outExtension"
+    $outFileName = "$testPrefix-output-$thisInstanceIndex.$outExtension"
     $instanceDescription | add-member -type NoteProperty -Name FileName -Value $outFileName
 
     $command = "";
     $instanceDescription | add-member -type NoteProperty -Name PassCount -Value $aPassSetting
 
-
-
+    
 
     if($aPassSetting -eq 1){
-        $command = "ffmpeg -i $inputVideoFile  $(GenerateParametersString $x264Options $x265Options $ffmpegOptions) -y $outFileName"
+        $command = "bin/ffmpeg $rawVideoAdditionalOptions -i $inputVideoFile  $(GenerateParametersString $x264Options $x265Options $ffmpegOptions) -y $outFileName"
     }else{
 
         $extraOpt1 = "";
@@ -150,10 +151,11 @@ foreach($aPartitionSetting in $partitionSettings){
             $extraOpt2 = $extraOpt1
         }
 
-        $command =  "bin/ffmpeg.exe -i $inputVideoFile $extraOpt1 -y -pass 1  -f null -; "
-        $command += "bin/ffmpeg.exe -i $inputVideoFile $extraOpt2 -y -pass 2 $outFileName 2>&1"
+        $command =  "bin/ffmpeg.exe $rawVideoAdditionalOptions -i $inputVideoFile $extraOpt1 -y -pass 1  -f null -; "
+        $command += "bin/ffmpeg.exe $rawVideoAdditionalOptions -i $inputVideoFile $extraOpt2 -y -pass 2 $outFileName 2>&1"
     }
 
+    
 
     $measurement = Measure-Command -Expression { $ErrorActionPreference = "Continue"; iex $command; $ErrorActionPreference = "Inquire";}
     $encodingTime = $measurement.TotalSeconds
@@ -174,8 +176,10 @@ foreach($aPartitionSetting in $partitionSettings){
     $ErrorActionPreference = "Continue"
     $BOutText =  bin/ffmpeg.exe  -i $outFileName -benchmark -f null - 2>&1
     $ErrorActionPreference = "Inquire"
-    $decodingTime = $BOutText[-2] -replace "[^0-9.]";
-    $instanceDescription | add-member -type NoteProperty -Name DecodingTime -Value $decodingTime
+    $decodingTimes = $BOutText[-2] -replace "[^0-9.\ ]" -split ' '
+    $instanceDescription | add-member -type NoteProperty -Name DecodingUTime -Value $decodingTimes[1]
+    $instanceDescription | add-member -type NoteProperty -Name DecodingSTime -Value $decodingTimes[2]
+    $instanceDescription | add-member -type NoteProperty -Name DecodingRTime -Value $decodingTimes[3]
     $decodingMem =  $BOutText[-1] -replace "[^0-9]"
     $instanceDescription | add-member -type NoteProperty -Name DecodingMem -Value $decodingMem
 
@@ -199,4 +203,4 @@ foreach($aProp in $props){
     } 
 }
 
-$instanceDescriptions | Export-Csv -Path .\VideoInfos.csv 
+$instanceDescriptions | Export-Csv -Path ".\$testPrefix-VideoInfos.csv "
