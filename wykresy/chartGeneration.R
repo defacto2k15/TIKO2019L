@@ -6,7 +6,7 @@ setwd("C:\\studiaMagisterskie\\TIKO\\projekt\\wykresy")
 
 savePlot <- function(filename, plot){
   ggsave(paste("plots/", filename, ".png", sep=""), plot=plot)
-  #print(plot)
+  print(plot)
 }
 
 toHumanReadableBytes <- function(n){ #TODO wieksza dokladnosc!!!
@@ -43,10 +43,6 @@ generationParams$ParameterAbrValue <- generationParams$ParameterAbrValue*1024
 generationParams$ParameterCbrValue <- generationParams$ParameterCbrValue*1024
 generationParams$ParameterVbvValue <- generationParams$ParameterVbvValue*1024
 
-# abrGenerationParams <- generationParams[  !is.na(generationParams$ParameterAbrValue) & is.na(generationParams$ParameterVbvValue),]
-
-#ad <- abrGenerationParams# data.frame( abrGenerationParams$FileName, abrGenerationParams$ParameterAbrValue, abrGenerationParams$LibVersion, abrGenerationParams$OutBitrate, abrGenerationParams$DecodingUTime)
-#colnames(ad) <- c("FileName", "ParameterAbrValue", "LibVersion","OutBitrate", "DecodingUTime")
 generationParams$NamedBitrate <-  unlist(lapply(generationParams$OutBitrate, toHumanReadableBytes), use.names=FALSE)
 generationParams$NamedLibVersion <-  unlist(lapply(generationParams$LibVersion, toHumanReadableLibVersion), use.names=FALSE)
 
@@ -92,7 +88,7 @@ generateBitrateScorePlot <- function( ad, paramName, paramValues){
   theme_set(theme_bw())
   p <- ggplot(ad, aes( y=ad$Score, x=(ad$OutBitrate), group=NamedLibVersion)) + 
     geom_jitter(aes(col=NamedLibVersion ), size=2, width=0, height=0.2, alpha = 0.5)   +
-    geom_smooth(aes(col=NamedLibVersion), method="lm", formula=y ~ splines::bs(x, 3), se=F) + 
+    geom_smooth(aes(col=NamedLibVersion), method="lm", formula=y ~ poly(x, 3), se=F) + 
     scale_x_log10(breaks = breaks,  labels = lapply(breaks, toHumanReadableBytes))  +
     annotation_logticks(sides="b")  +
     guides(fill=FALSE) +
@@ -109,8 +105,8 @@ generateBitrateKbParameterPlot <- function( ad, paramName, paramValues){
   breaks <- 100000 * c(1,2,5, 10, 20, 50, 100)
   yScale = seq(100)
   p <- ggplot(ad, aes( y=OutBitrate, x=(paramValues), group=NamedLibVersion)) + 
-    geom_jitter(aes(col=NamedLibVersion ), size=2, width=0, height=0.2, alpha = 0.5)   +
-    geom_smooth(aes(col=NamedLibVersion), method="lm", formula=y ~ splines::bs(x, 3), se=F) +
+    geom_jitter(aes(col=NamedLibVersion ), size=2, width=0, height=0, alpha = 0.5)   +
+    geom_smooth(aes(col=NamedLibVersion), method="lm", formula=y ~ poly(x, 3), se=F) +
     scale_y_log10(breaks = breaks, labels = lapply(breaks, toHumanReadableBytes)) +
     scale_x_log10(breaks = breaks, labels = lapply(breaks, toHumanReadableBytes)) +
     annotation_logticks(sides="lb")  +
@@ -128,8 +124,8 @@ generateBitrateCrfParameterPlot <- function( ad, paramName, paramValues){
   breaks <- 100000 * c(1,2,5, 10, 20, 50, 100)
   yScale = seq(100)
   p <- ggplot(ad, aes( y=OutBitrate, x=(paramValues), group=NamedLibVersion)) + 
-    geom_jitter(aes(col=NamedLibVersion ), size=2, width=0, height=0.2, alpha = 0.5)   +
-    geom_smooth(aes(col=NamedLibVersion), method="lm", formula=y ~ splines::bs(x, 3), se=F) +
+    geom_jitter(aes(col=NamedLibVersion ), size=2, width=0, height=0, alpha = 0.5)   +
+    geom_smooth(aes(col=NamedLibVersion), method="lm", formula=y ~ poly(x, 3), se=F) +
     scale_y_log10(breaks = breaks, labels = lapply(breaks, toHumanReadableBytes)) +
     scale_x_continuous() +
     annotation_logticks(sides="l")  +
@@ -145,9 +141,9 @@ generateBitrateTimePlot <- function( ad, paramName, paramValues){
   # Bitrate - Time
   breaks <- 100000 * c(1,2,5, 10, 20, 50, 100)
   
-  p <- ggplot(ad, aes( y=DecodingUTime, x=(OutBitrate), fill=NamedLibVersion)) + 
-    geom_jitter(aes(col=NamedLibVersion ), size=2, width=0, height=0.2, alpha = 0.5)   +
-    geom_smooth(aes(col=NamedLibVersion), method="lm", formula=y ~ splines::bs(x, 3), se=F) +
+  p <- ggplot(ad, aes( y=EncodingTime, x=(OutBitrate), fill=NamedLibVersion)) + 
+    geom_jitter(aes(col=NamedLibVersion ), size=2, width=0, height=0, alpha = 0.5)   +
+    geom_smooth(aes(col=NamedLibVersion), method="lm", formula=y ~ poly(x, 3), se=F) +
     scale_x_log10(breaks = breaks, labels = lapply(breaks, toHumanReadableBytes))  +
     annotation_logticks(sides="b") +
     guides(fill=FALSE) +
@@ -193,8 +189,8 @@ breaks <- 100000 * c(1,2,5, 10, 20, 50, 100)
 
 p <- ggplot(generationParams, aes( y=generationParams$Score, x=generationParams$OutBitrate, 
                                    group=interaction(NamedLibVersion, codingType ), color=codingType, linetype=NamedLibVersion)) +
-  geom_jitter( size=2, width=0, height=0.2, alpha = 0.5)   +
-  geom_smooth( method="lm", formula=y ~ splines::bs(x, 3), se=F ) +
+  geom_jitter( size=0.5, width=0, height=0.2, alpha = 0.5)   +
+  geom_smooth(size=0.5, method="lm", formula=y ~  poly(x, 3), se=F ) +
   scale_x_log10(breaks = breaks,  labels = lapply(breaks, toHumanReadableBytes))  +
   annotation_logticks(sides="b")  +
   guides(fill=FALSE) +
@@ -206,10 +202,10 @@ savePlot("Summary-Bitrate-Score",p)
 
 
 
-p <- ggplot(generationParams, aes( y=generationParams$DecodingUTime, x=generationParams$OutBitrate, 
+p <- ggplot(generationParams, aes( y=generationParams$EncodingTime, x=generationParams$OutBitrate, 
                                    group=interaction(NamedLibVersion, codingType ), color=codingType, linetype=NamedLibVersion)) +
-  geom_jitter( size=2, width=0, height=0.2, alpha = 0.5)   +
-  geom_smooth( method="lm", formula=y ~ splines::bs(x, 3), se=F ) +
+  geom_jitter( size=0.5, width=0, height=0, alpha = 0.5)   +
+  geom_smooth(size=0.5, method="lm", formula=y ~ poly(x, 3), se=F ) +
   scale_x_log10(breaks = breaks,  labels = lapply(breaks, toHumanReadableBytes))  +
   annotation_logticks(sides="b")  +
   guides(fill=FALSE) +
@@ -220,10 +216,10 @@ p <- ggplot(generationParams, aes( y=generationParams$DecodingUTime, x=generatio
 savePlot("Summary-Time-Bitrate",p)
 
 breaks <- 100000 * c(1,2,5, 10, 20, 50, 100)
-p <- ggplot(generationParams, aes( y=generationParams$DecodingUTime, x=generationParams$Score, 
+p <- ggplot(generationParams, aes(  y=generationParams$EncodingTime, x=generationParams$Score, 
                                    group=interaction(NamedLibVersion, codingType ), color=codingType, linetype=NamedLibVersion)) +
-  geom_jitter( size=2, width=0, height=0.2, alpha = 0.5)   +
-  geom_smooth( method="lm", formula=y ~ splines::bs(x, 3), se=F ) +
+  geom_jitter( size=0.5, width=0, height=0.2, alpha = 0.5)   +
+  geom_smooth(size=0.5, method="lm", formula=y ~ poly(x, 3), se=F ) +
   guides(fill=FALSE) +
   labs(title = "Podsumowanie - Czas kodowania a ocena",
        y = "Czas kodowania (sekundy)",
